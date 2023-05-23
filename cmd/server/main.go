@@ -13,7 +13,7 @@ import (
 
 var (
 	DEBUG         = true
-	REQUIRED_VARS = []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "APP_PORT"}
+	REQUIRED_VARS = []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "APP_PORT"}
 )
 
 func main() {
@@ -71,10 +71,6 @@ func main() {
 	})
 
 	port := os.Getenv("APP_PORT")
-	// Fall back to port 8080 in the event we made it here and APP_PORT is not set
-	if port == "" {
-		port = "8080"
-	}
 	err = r.Run(":" + port)
 	if err != nil {
 		log.Fatalf("Error: failed to start the server. %v\n", err.Error())
@@ -84,9 +80,9 @@ func main() {
 func printEnvDebugInfo() {
 	for _, v := range REQUIRED_VARS {
 		if os.Getenv(v) != "" {
-			log.Printf("%-16s %v\n", v+" set:", true)
+			log.Printf("%-16s %t\n", v+" set:", true)
 		} else {
-			log.Printf("%-16s %v\n", v+" set:", false)
+			log.Printf("%-16s %t\n", v+" set:", false)
 		}
 	}
 }
