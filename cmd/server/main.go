@@ -9,7 +9,6 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"os"
-	"time"
 )
 
 var (
@@ -18,9 +17,7 @@ var (
 )
 
 func main() {
-
-	startTime := time.Now()
-	log.Printf("Starting up at %v\n", startTime)
+	log.Printf("Starting up...")
 
 	//====================================================================
 	// Environment Variables
