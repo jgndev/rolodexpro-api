@@ -1,14 +1,26 @@
 package handler
 
 import (
+	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/jgndev/rolodexpro-api/internal/config"
 	"github.com/jgndev/rolodexpro-api/internal/dto"
 	"github.com/jgndev/rolodexpro-api/internal/model"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
+	"os"
+	"time"
 )
+
+type jwtCustomClaims struct {
+	User model.User `json:"user"`
+	jwt.StandardClaims
+}
+
+var jwtSecret = []byte(os.Getenv(config.JwtSecret))
 
 func RegistrationHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -39,6 +51,22 @@ func RegistrationHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"message": "User registered"})
+		claims := &jwtCustomClaims{
+			User: user,
+			StandardClaims: jwt.StandardClaims{
+				ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),
+			},
+		}
+
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		ss, err := token.SignedString(jwtSecret)
+		if err != nil {
+			message := fmt.Sprintf("Error: could not generate token. %v\n", err.Error())
+			log.Println(message)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": message})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"token": ss})
 	}
 }

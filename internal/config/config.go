@@ -17,6 +17,7 @@ const (
 	Auth0ClientId     = "AUTH0_CLIENT_ID"
 	Auth0ClientSecret = "AUTH0_CLIENT_SECRET"
 	Auth0CCallbackUrl = "AUTH0_CALLBACK_URL"
+	JwtSecret         = "JWT_SECRET"
 	Debug             = true
 )
 
@@ -32,6 +33,7 @@ var RequiredVars = []string{
 	Auth0ClientId,
 	Auth0ClientSecret,
 	Auth0CCallbackUrl,
+	JwtSecret,
 }
 
 func PrintConfigStatus() {
