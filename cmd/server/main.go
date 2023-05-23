@@ -49,7 +49,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error: failed to connect to database. %v\n", err.Error())
 	}
-	defer db.Close()
+	defer func(db *gorm.DB) {
+		err = db.Close()
+		if err != nil {
+			log.Fatalf("Error: caught closing databsae connection. %v\n", err.Error())
+		}
+	}(db)
 
 	// Apply migrations
 	db.AutoMigrate(&model.User{}, &model.Contact{}, &model.Category{})
@@ -69,6 +74,10 @@ func main() {
 	})
 
 	port := os.Getenv("APP_PORT")
+	// Fall back to port 8080 in the event we made it here and APP_PORT is not set
+	if port == "" {
+		port = "8080"
+	}
 	err = r.Run(":" + port)
 	if err != nil {
 		log.Fatalf("Error: failed to start the server. %v\n", err.Error())
