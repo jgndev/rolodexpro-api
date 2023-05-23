@@ -2,19 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/jgndev/rolodexpro-api/internal/handler"
+	"github.com/jgndev/rolodexpro-api/internal/authenticator"
+	"github.com/jgndev/rolodexpro-api/internal/config"
 	"github.com/jgndev/rolodexpro-api/internal/model"
+	"github.com/jgndev/rolodexpro-api/internal/router"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/joho/godotenv"
 	"log"
+	"net/http"
 	"os"
 )
-
-const kDebug = true
-
-var RequiredVars = []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "APP_PORT"}
 
 func main() {
 	log.Printf("Starting up...")
@@ -28,12 +26,12 @@ func main() {
 	}
 
 	// Show debug info for environment variables if in debug mode
-	if kDebug {
-		printEnvDebugInfo()
+	if config.Debug {
+		config.PrintConfigStatus()
 	}
 
 	// Ensure required variables are present before continuing
-	for _, v := range RequiredVars {
+	for _, v := range config.RequiredVars {
 		if os.Getenv(v) == "" {
 			log.Fatalf("Error: required environment variable %v not set\n", v)
 		}
@@ -42,6 +40,7 @@ func main() {
 	//====================================================================
 	// GORM
 	//====================================================================
+	log.Println("Opening database connection...")
 	db, err := gorm.Open("postgres", getDbConnectionStr())
 	if err != nil {
 		log.Fatalf("Error: failed to connect to database. %v\n", err.Error())
@@ -54,52 +53,35 @@ func main() {
 	}(db)
 
 	// Apply migrations
+	log.Println("Applying pending migrations...")
 	db.AutoMigrate(&model.User{}, &model.Contact{}, &model.Category{})
 
 	//==================================================================
-	// Gin
+	// Server
 	//==================================================================
-	r := gin.Default()
-	if kDebug {
-		gin.SetMode(gin.DebugMode)
-	} else {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	// Simple healthcheck route
-	r.GET("/health", func(c *gin.Context) {
-		c.String(200, "OK")
-	})
-
-	// Local registration and login routes
-	r.POST("/register", handler.RegistrationHandler(db))
-	r.POST("/login", handler.LoginHandler(db))
-
-	port := os.Getenv("APP_PORT")
-	err = r.Run(":" + port)
+	log.Println("Configuring authenticator...")
+	auth, err := authenticator.New()
 	if err != nil {
-		log.Fatalf("Error: failed to start the server. %v\n", err.Error())
+		log.Fatalf("Error: failed to initialize the authenticator: %v\n", err.Error())
 	}
-}
 
-func printEnvDebugInfo() {
-	for _, v := range RequiredVars {
-		if os.Getenv(v) != "" {
-			log.Printf("%-16s %t\n", v+" set:", true)
-		} else {
-			log.Printf("%-16s %t\n", v+" set:", false)
-		}
+	log.Println("Configuring router...")
+	rtr := router.New(auth, db)
+	//port := os.Getenv("APP_PORT")
+	port := os.Getenv(config.AppPort)
+	if err = http.ListenAndServe(":"+port, rtr); err != nil {
+		log.Fatalf("Error: failed to start the server. %v\n", err.Error())
 	}
 }
 
 func getDbConnectionStr() string {
 	return fmt.Sprintf(
 		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_SSLMODE"),
+		os.Getenv(config.DbHost),
+		os.Getenv(config.DbPort),
+		os.Getenv(config.DbUser),
+		os.Getenv(config.DbName),
+		os.Getenv(config.DbPassword),
+		os.Getenv(config.DbSslMode),
 	)
 }
