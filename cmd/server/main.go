@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/jgndev/rolodexpro-api/internal/handler"
 	"github.com/jgndev/rolodexpro-api/internal/model"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -11,10 +12,9 @@ import (
 	"os"
 )
 
-var (
-	DEBUG         = true
-	REQUIRED_VARS = []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "APP_PORT"}
-)
+const kDebug = true
+
+var RequiredVars = []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "APP_PORT"}
 
 func main() {
 	log.Printf("Starting up...")
@@ -28,12 +28,12 @@ func main() {
 	}
 
 	// Show debug info for environment variables if in debug mode
-	if DEBUG {
+	if kDebug {
 		printEnvDebugInfo()
 	}
 
 	// Ensure required variables are present before continuing
-	for _, v := range REQUIRED_VARS {
+	for _, v := range RequiredVars {
 		if os.Getenv(v) == "" {
 			log.Fatalf("Error: required environment variable %v not set\n", v)
 		}
@@ -60,15 +60,20 @@ func main() {
 	// Gin
 	//==================================================================
 	r := gin.Default()
-	if DEBUG {
+	if kDebug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r.GET("/ping", func(c *gin.Context) {
-		c.String(200, "pong")
+	// Simple healthcheck route
+	r.GET("/health", func(c *gin.Context) {
+		c.String(200, "OK")
 	})
+
+	// Local registration and login routes
+	r.POST("/register", handler.RegistrationHandler(db))
+	r.POST("/login", handler.LoginHandler(db))
 
 	port := os.Getenv("APP_PORT")
 	err = r.Run(":" + port)
@@ -78,7 +83,7 @@ func main() {
 }
 
 func printEnvDebugInfo() {
-	for _, v := range REQUIRED_VARS {
+	for _, v := range RequiredVars {
 		if os.Getenv(v) != "" {
 			log.Printf("%-16s %t\n", v+" set:", true)
 		} else {
