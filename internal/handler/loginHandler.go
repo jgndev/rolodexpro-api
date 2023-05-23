@@ -6,13 +6,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jgndev/rolodexpro-api/internal/dto"
 	"github.com/jgndev/rolodexpro-api/internal/model"
-	"github.com/jgndev/rolodexpro-api/internal/types"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"time"
 )
+
+type JwtCustomClaims struct {
+	User model.User `json:"user"`
+	jwt.StandardClaims
+}
 
 func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -36,7 +40,7 @@ func LoginHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		claims := &types.JwtCustomClaims{
+		claims := &JwtCustomClaims{
 			User: user,
 			StandardClaims: jwt.StandardClaims{
 				ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),

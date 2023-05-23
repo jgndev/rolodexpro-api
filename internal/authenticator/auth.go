@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/jgndev/rolodexpro-api/internal/config"
 	"golang.org/x/oauth2"
 	"os"
 )
@@ -17,16 +18,16 @@ type Authenticator struct {
 func New() (*Authenticator, error) {
 	provider, err := oidc.NewProvider(
 		context.Background(),
-		"https://"+os.Getenv("AUTH0_DOMAIN")+"/",
+		"https://"+os.Getenv(config.Auth0Domain)+"/",
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	conf := oauth2.Config{
-		ClientID:     os.Getenv("AUTH0_CLIENT_ID"),
-		ClientSecret: os.Getenv("AUTH0_CLIENT_SECRET"),
-		RedirectURL:  os.Getenv("AUTH0_CALLBACK_URL"),
+		ClientID:     os.Getenv(config.Auth0ClientId),
+		ClientSecret: os.Getenv(config.Auth0ClientSecret),
+		RedirectURL:  os.Getenv(config.Auth0CCallbackUrl),
 		Endpoint:     provider.Endpoint(),
 		Scopes:       []string{oidc.ScopeOpenID, "profile"},
 	}
