@@ -7,6 +7,7 @@ import (
 	"github.com/jgndev/rolodexpro-api/internal/config"
 	"github.com/jgndev/rolodexpro-api/internal/dto"
 	"github.com/jgndev/rolodexpro-api/internal/model"
+	"github.com/jgndev/rolodexpro-api/internal/types"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -14,11 +15,6 @@ import (
 	"os"
 	"time"
 )
-
-type jwtCustomClaims struct {
-	User model.User `json:"user"`
-	jwt.StandardClaims
-}
 
 var jwtSecret = []byte(os.Getenv(config.JwtSecret))
 
@@ -51,7 +47,7 @@ func RegistrationHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		claims := &jwtCustomClaims{
+		claims := &types.JwtCustomClaims{
 			User: user,
 			StandardClaims: jwt.StandardClaims{
 				ExpiresAt: time.Now().Add(time.Hour * 72).Unix(),

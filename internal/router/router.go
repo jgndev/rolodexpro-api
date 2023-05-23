@@ -32,7 +32,8 @@ func New(auth *authenticator.Authenticator, db *gorm.DB) *gin.Engine {
 	router.GET("/authenticator-zero-login", handler.AuthZeroLoginHandler(db, auth))
 	router.GET("/authenticator-zero-logout", handler.AuthZeroLogoutHandler())
 	router.GET("/callback", callback.Handler(auth))
-	router.GET("/user", middleware.IsAuthenticated, user.Handler)
+	//router.GET("/user", middleware.IsAuthenticated, user.Handler)
+	router.GET("/user", middleware.JwtMiddleware(), user.Handler)
 
 	return router
 }
