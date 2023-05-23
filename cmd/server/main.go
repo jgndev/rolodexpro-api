@@ -7,53 +7,92 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/joho/godotenv"
+	"log"
 	"os"
+	"time"
+)
+
+var (
+	DEBUG         = true
+	REQUIRED_VARS = []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "APP_PORT"}
 )
 
 func main() {
-	// Read variables set in local .env file if present
+
+	startTime := time.Now()
+	log.Printf("Starting up at %v\n", startTime)
+
+	//====================================================================
+	// Environment Variables
+	//====================================================================
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("No .env file found")
+		log.Println("No .env file found, will fall back to OS environment variables")
 	}
 
-	fmt.Printf("DB_HOST: %v\n", os.Getenv("DB_HOST"))
-	fmt.Printf("DB_PORT: %v\n", os.Getenv("DB_PORT"))
-	fmt.Printf("DB_USER: %v\n", os.Getenv("DB_USER"))
-	fmt.Printf("DB_PASSWORD: %v\n", os.Getenv("DB_PASSWORD"))
-	fmt.Printf("DB_NAME: %v\n", os.Getenv("DB_NAME"))
-	fmt.Printf("DB_SSLMODE: %v\n", os.Getenv("DB_SSLMODE"))
+	// Show debug info for environment variables if in debug mode
+	if DEBUG {
+		printEnvDebugInfo()
+	}
 
-	// Open the DB connection
-	db, err := gorm.Open(
-		"postgres",
-		fmt.Sprintf(
-			"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-			os.Getenv("DB_HOST"),
-			os.Getenv("DB_PORT"),
-			os.Getenv("DB_USER"),
-			os.Getenv("DB_NAME"),
-			os.Getenv("DB_PASSWORD"),
-			os.Getenv("DB_SSLMODE"),
-		),
-	)
+	// Ensure required variables are present before continuing
+	for _, v := range REQUIRED_VARS {
+		if os.Getenv(v) == "" {
+			log.Fatalf("Error: required environment variable %v not set\n", v)
+		}
+	}
+
+	//====================================================================
+	// GORM
+	//====================================================================
+	db, err := gorm.Open("postgres", getDbConnectionStr())
 	if err != nil {
-		panic("failed to connect to database")
+		log.Fatalf("Error: failed to connect to database. %v\n", err.Error())
 	}
 	defer db.Close()
 
 	// Apply migrations
 	db.AutoMigrate(&model.User{}, &model.Contact{}, &model.Category{})
 
+	//==================================================================
 	// Gin
+	//==================================================================
 	r := gin.Default()
+	if DEBUG {
+		gin.SetMode(gin.DebugMode)
+	} else {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.String(200, "pong")
 	})
 
-	err = r.Run(":8080")
+	port := os.Getenv("APP_PORT")
+	err = r.Run(":" + port)
 	if err != nil {
-		return
+		log.Fatalf("Error: failed to start the server. %v\n", err.Error())
 	}
+}
+
+func printEnvDebugInfo() {
+	for _, v := range REQUIRED_VARS {
+		if os.Getenv(v) != "" {
+			log.Printf("%-16s %v\n", v+" set:", true)
+		} else {
+			log.Printf("%-16s %v\n", v+" set:", false)
+		}
+	}
+}
+
+func getDbConnectionStr() string {
+	return fmt.Sprintf(
+		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_SSLMODE"),
+	)
 }
